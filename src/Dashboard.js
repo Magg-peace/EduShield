@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { collection, getDocs } from 'firebase/firestore';
+import { collection, getDocs, addDoc, serverTimestamp } from 'firebase/firestore';
 import { db, auth } from './firebase';
 import { signOut } from 'firebase/auth';
 import { useNavigate } from 'react-router-dom';
-import { LogOut, AlertTriangle, TrendingDown, UserCheck, Activity, ShieldAlert, Sparkles, Search, Filter, X, ChevronRight, Mail } from 'lucide-react';
+import { LogOut, AlertTriangle, TrendingDown, UserCheck, Activity, ShieldAlert, Sparkles, Search, Filter, X, ChevronRight, Mail, PhoneCall } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, PieChart, Pie } from 'recharts';
 
 const Dashboard = ({ setAuthUser }) => {
@@ -12,6 +12,11 @@ const Dashboard = ({ setAuthUser }) => {
   const [searchTerm, setSearchTerm] = useState("");
   const [filterRisk, setFilterRisk] = useState("ALL");
   const [sendingEmail, setSendingEmail] = useState(false);
+  const [showReportModal, setShowReportModal] = useState(false);
+  const [reportType, setReportType] = useState('emergency');
+  const [reportDesc, setReportDesc] = useState('');
+  const [submittingReport, setSubmittingReport] = useState(false);
+  
   const navigate = useNavigate();
 
   const fetchStudents = async () => {
@@ -86,6 +91,42 @@ const Dashboard = ({ setAuthUser }) => {
     }
   };
 
+  const submitReport = async (e) => {
+    e.preventDefault();
+    setSubmittingReport(true);
+    try {
+      await addDoc(collection(db, 'reports'), {
+        type: reportType,
+        description: reportDesc,
+        status: 'pending',
+        timestamp: serverTimestamp(),
+        userId: auth.currentUser?.uid || 'anonymous'
+      });
+      
+      if (reportType === 'emergency' || reportType === 'harassment') {
+        // Trigger automated AI workflow
+        await fetch("https://us-central1-edushield-979f8.cloudfunctions.net/dispatchAlert", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            message: "CRITICAL: " + reportType.toUpperCase() + " reported. Immediate action required.",
+            userId: auth.currentUser?.uid || 'anonymous',
+            description: reportDesc
+          })
+        });
+      }
+      
+      alert("Report successfully logged and AI workflow engaged.");
+      setShowReportModal(false);
+      setReportDesc('');
+    } catch (error) {
+      console.error(error);
+      alert("Failed to send report");
+    } finally {
+      setSubmittingReport(false);
+    }
+  };
+
   const enhancedStudents = students.map(s => ({ ...s, risk: calculateRisk(s) }));
 
   const filteredStudents = enhancedStudents.filter(s => {
@@ -116,9 +157,14 @@ const Dashboard = ({ setAuthUser }) => {
             <p className="text-xs text-gray-500 mt-1 uppercase tracking-widest">Predictive Intelligence Dashboard</p>
           </div>
         </div>
-        <button onClick={() => setAuthUser(null)} className="flex items-center gap-2 px-4 py-2 bg-gray-800 hover:bg-gray-700 transition rounded-lg text-sm text-gray-300">
-          <LogOut className="w-4 h-4" /> Logout
-        </button>
+        <div className="flex items-center gap-4">
+          <button onClick={() => setShowReportModal(true)} className="flex items-center gap-2 px-4 py-2 bg-red-600/20 text-red-400 hover:bg-red-600 hover:text-white border border-red-500/30 transition rounded-lg text-sm font-bold shadow-[0_0_15px_rgba(239,68,68,0.2)]">
+            <PhoneCall className="w-4 h-4 animate-pulse" /> Report Crisis
+          </button>
+          <button onClick={() => setAuthUser(null)} className="flex items-center gap-2 px-4 py-2 bg-gray-800 hover:bg-gray-700 transition rounded-lg text-sm text-gray-300">
+            <LogOut className="w-4 h-4" /> Logout
+          </button>
+        </div>
       </header>
 
       <div className="max-w-7xl mx-auto space-y-8">
@@ -247,6 +293,42 @@ const Dashboard = ({ setAuthUser }) => {
         </div>
 
       </div>
+      
+      {/* Crisis Report Modal */}
+      {showReportModal && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-[#101625] border border-gray-800 rounded-2xl p-8 max-w-md w-full shadow-2xl relative animate-in fade-in zoom-in duration-200">
+            <button onClick={() => setShowReportModal(false)} className="absolute top-4 right-4 text-gray-500 hover:text-white"><X className="w-5 h-5" /></button>
+            <div className="flex items-center gap-3 mb-6">
+              <div className="p-3 bg-red-500/20 rounded-full"><AlertTriangle className="w-6 h-6 text-red-500" /></div>
+              <h2 className="text-2xl font-bold text-white">Report Incident</h2>
+            </div>
+            
+            <form onSubmit={submitReport} className="space-y-5">
+               <div>
+                 <label className="text-sm text-gray-400 mb-2 block font-semibold uppercase tracking-wider">Incident Category</label>
+                 <select value={reportType} onChange={(e) => setReportType(e.target.value)} className="w-full bg-gray-900 border border-gray-700 text-white rounded-xl px-4 py-3 focus:outline-none focus:border-red-500/50 transition">
+                   <option value="emergency">🚨 Critical Emergency / Crisis</option>
+                   <option value="harassment">⚠️ Harassment / Bullying</option>
+                   <option value="academic">📚 Academic Integrity Issue</option>
+                   <option value="general">ℹ️ General Concern</option>
+                 </select>
+               </div>
+               <div>
+                 <label className="text-sm text-gray-400 mb-2 block font-semibold uppercase tracking-wider">Description</label>
+                 <textarea required value={reportDesc} onChange={(e) => setReportDesc(e.target.value)} rows={4} placeholder="Describe the situation securely and anonymously. Our AI engine will parse this immediately." className="w-full bg-gray-900 border border-gray-700 text-white rounded-xl px-4 py-3 focus:outline-none focus:border-red-500/50 transition resize-none"></textarea>
+               </div>
+               
+               <p className="text-xs text-gray-500">Choosing high severity triggers an automated AI `dispatchAlert` directly to emergency administrative channels.</p>
+               
+               <button type="submit" disabled={submittingReport} className="w-full bg-red-600 hover:bg-red-500 text-white font-bold py-3 px-6 rounded-xl transition shadow-[0_0_15px_rgba(239,68,68,0.3)] hover:shadow-[0_0_25px_rgba(239,68,68,0.5)] flex items-center justify-center gap-2">
+                 {submittingReport ? <Activity className="w-5 h-5 animate-spin" /> : 'Log Report & Alert Staff'}
+               </button>
+            </form>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 };

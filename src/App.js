@@ -33,7 +33,7 @@ function App() {
     <Router>
       <div className="App">
         <Routes>
-          <Route path="/" element={!authUser ? <Landing /> : <Navigate to="/dashboard" />} />
+          <Route path="/" element={<Landing />} />
           <Route path="/login" element={!authUser ? <Login setAuthUser={setAuthUser} /> : <Navigate to="/dashboard" />} />
           <Route path="/dashboard" element={authUser ? <Dashboard setAuthUser={setAuthUser} /> : <Navigate to="/login" />} />
           <Route path="/student/:id" element={authUser ? <StudentProfile /> : <Navigate to="/login" />} />

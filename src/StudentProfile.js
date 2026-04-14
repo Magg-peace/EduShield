@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { doc, getDoc } from 'firebase/firestore';
+import { db } from './firebase';
 import { ArrowLeft, BrainCircuit, Activity, AlertTriangle, ShieldCheck, Mail } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
 
@@ -44,24 +46,25 @@ const StudentProfile = () => {
     }
   };
 
-  // Simulated Fetch based on ID
   useEffect(() => {
-    // Ideally fetch from Firestore here. Mocking for demo.
-    const mock = {
-      id,
-      name: "Alex Johnson",
-      attendance: 60,
-      marks: 65,
-      engagement: 30,
-      risk: 72, // precalculated or calculated on backend
+    const fetchStudent = async () => {
+      try {
+        const docRef = doc(db, 'students', id);
+        const docSnap = await getDoc(docRef);
+        if (docSnap.exists()) {
+          const data = docSnap.data();
+          const riskCalc = ((100 - data.attendance) * 0.3 + (100 - data.marks) * 0.3 + (100 - data.engagement) * 0.4);
+          setStudent({ id: docSnap.id, ...data, risk: riskCalc });
+        } else {
+          // Fallback if not found
+          setStudent({ id, name: "Unknown Student", attendance: 50, marks: 50, engagement: 50, risk: 50 });
+        }
+      } catch (err) {
+        console.error(err);
+        setStudent({ id, name: "Error Loading Data", attendance: 0, marks: 0, engagement: 0, risk: 100 });
+      }
     };
-    if (id === '2') {
-       mock.name = "Sam Smith"; mock.attendance = 90; mock.engagement = 40; mock.risk=45;
-    }
-    if (id === '5') {
-       mock.name = "Taylor Swift"; mock.attendance = 98; mock.engagement = 90; mock.risk=10;
-    }
-    setStudent(mock);
+    fetchStudent();
   }, [id]);
 
   if (!student) return <div className="min-h-screen bg-[#0A0F1C] flex justify-center items-center"><Activity className="animate-spin text-indigo-500 w-8 h-8" /></div>;
