@@ -3,7 +3,12 @@ import { collection, getDocs, addDoc, serverTimestamp } from 'firebase/firestore
 import { db, auth } from './firebase';
 import { signOut } from 'firebase/auth';
 import { useNavigate } from 'react-router-dom';
-import { LogOut, AlertTriangle, TrendingDown, UserCheck, Activity, ShieldAlert, Sparkles, Search, Filter, X, ChevronRight, Mail, PhoneCall } from 'lucide-react';
+import { LogOut, AlertTriangle, TrendingDown, UserCheck, Activity, ShieldAlert, Sparkles, Search, Filter, X, ChevronRight, Mail, PhoneCall, Mic, MicOff, Globe, MapPin, CheckCircle } from 'lucide-react';
+
+const dict = {
+  en: { title: "EduShield X", sub: "Predictive Intelligence Dashboard", total: "Total Students", highRisk: "High Risk (Predictive)", silent: "Silent Dropouts", run: "Run Engine Analysis", logout: "Logout", report: "Report Crisis", map: "Campus Incident Hotspots" },
+  es: { title: "EduShield X", sub: "Panel de Inteligencia Predictiva", total: "Estudiantes Totales", highRisk: "Alto Riesgo (Predictivo)", silent: "Deserciones Silenciosas", run: "Ejecutar Análisis", logout: "Cerrar Sesión", report: "Reportar Crisis", map: "Zonas de Incidentes en Campus" }
+};
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, PieChart, Pie } from 'recharts';
 
 const Dashboard = ({ setAuthUser }) => {
@@ -16,8 +21,29 @@ const Dashboard = ({ setAuthUser }) => {
   const [reportType, setReportType] = useState('emergency');
   const [reportDesc, setReportDesc] = useState('');
   const [submittingReport, setSubmittingReport] = useState(false);
+  const [lang, setLang] = useState('en');
+  const [toast, setToast] = useState(null);
+  const [isListening, setIsListening] = useState(false);
   
   const navigate = useNavigate();
+  const t = dict[lang];
+
+  const showToast = (msg, type = 'success') => {
+    setToast({ msg, type });
+    setTimeout(() => setToast(null), 3000);
+  };
+
+  const handleVoiceRecord = () => {
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRecognition) return showToast("Voice recognition not supported in this browser.", "error");
+    const recognition = new SpeechRecognition();
+    recognition.lang = lang === 'en' ? 'en-US' : 'es-ES';
+    recognition.onstart = () => setIsListening(true);
+    recognition.onresult = (e) => setReportDesc(prev => prev + " " + e.results[0][0].transcript);
+    recognition.onerror = () => { showToast("Error capturing voice", "error"); setIsListening(false); };
+    recognition.onend = () => setIsListening(false);
+    recognition.start();
+  };
 
   const fetchStudents = async () => {
     setLoading(true);
@@ -80,12 +106,12 @@ const Dashboard = ({ setAuthUser }) => {
         }),
       });
       if (response.ok) {
-        alert("Alert dispatched successfully! 📩");
+        showToast("Alert dispatched successfully! 📩", "success");
       } else {
-        alert("Action completed (Local Test Mode)");
+        showToast("Action completed (Local Test Mode)", "success");
       }
     } catch (error) {
-      alert("Action completed (Local Test Mode)");
+      showToast("Action completed (Local Test Mode)", "success");
     } finally {
       setSendingEmail(false);
     }
@@ -116,12 +142,12 @@ const Dashboard = ({ setAuthUser }) => {
         });
       }
       
-      alert("Report successfully logged and AI workflow engaged.");
+      showToast("Report successfully logged and AI workflow engaged.", "success");
       setShowReportModal(false);
       setReportDesc('');
     } catch (error) {
       console.error(error);
-      alert("Failed to send report");
+      showToast("Failed to send report", "error");
     } finally {
       setSubmittingReport(false);
     }
@@ -153,16 +179,19 @@ const Dashboard = ({ setAuthUser }) => {
         <div className="flex items-center gap-3">
           <div className="p-2 bg-indigo-500/20 rounded-xl"><ShieldAlert className="w-8 h-8 text-indigo-400" /></div>
           <div>
-            <h1 className="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-purple-400 tracking-tight">EduShield X</h1>
-            <p className="text-xs text-gray-500 mt-1 uppercase tracking-widest">Predictive Intelligence Dashboard</p>
+            <h1 className="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-purple-400 tracking-tight">{t.title}</h1>
+            <p className="text-xs text-gray-500 mt-1 uppercase tracking-widest">{t.sub}</p>
           </div>
         </div>
         <div className="flex items-center gap-4">
-          <button onClick={() => setShowReportModal(true)} className="flex items-center gap-2 px-4 py-2 bg-red-600/20 text-red-400 hover:bg-red-600 hover:text-white border border-red-500/30 transition rounded-lg text-sm font-bold shadow-[0_0_15px_rgba(239,68,68,0.2)]">
-            <PhoneCall className="w-4 h-4 animate-pulse" /> Report Crisis
+          <button onClick={() => setLang(lang === 'en' ? 'es' : 'en')} className="flex items-center gap-2 px-3 py-2 bg-blue-600/20 text-blue-400 hover:bg-blue-600 hover:text-white transition rounded-lg text-sm font-bold">
+            <Globe className="w-4 h-4" /> {lang === 'en' ? 'ES' : 'EN'}
           </button>
-          <button onClick={() => setAuthUser(null)} className="flex items-center gap-2 px-4 py-2 bg-gray-800 hover:bg-gray-700 transition rounded-lg text-sm text-gray-300">
-            <LogOut className="w-4 h-4" /> Logout
+          <button onClick={() => setShowReportModal(true)} className="flex items-center gap-2 px-4 py-2 bg-red-600/20 text-red-400 hover:bg-red-600 hover:text-white border border-red-500/30 transition rounded-lg text-sm font-bold shadow-[0_0_15px_rgba(239,68,68,0.2)]">
+            <PhoneCall className="w-4 h-4 animate-pulse" /> {t.report}
+          </button>
+          <button onClick={() => setAuthUser(null)} className="flex items-center gap-2 px-4 py-2 bg-gray-800 hover:bg-gray-700 transition rounded-lg text-sm text-gray-300 hidden md:flex">
+            <LogOut className="w-4 h-4" /> {t.logout}
           </button>
         </div>
       </header>
@@ -171,21 +200,21 @@ const Dashboard = ({ setAuthUser }) => {
         {/* KPI Cards */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
           <div className="bg-gradient-to-br from-indigo-900/40 to-[#0A0F1C] border border-indigo-500/20 p-6 rounded-2xl group hover:border-indigo-500/50 transition">
-             <h3 className="text-gray-400 text-sm font-medium flex items-center justify-between">Total Students <UserCheck className="w-5 h-5 text-indigo-400 group-hover:scale-110 transition" /></h3>
+             <h3 className="text-gray-400 text-sm font-medium flex items-center justify-between">{t.total} <UserCheck className="w-5 h-5 text-indigo-400 group-hover:scale-110 transition" /></h3>
              <p className="text-4xl font-bold text-white mt-2">{enhancedStudents.length}</p>
           </div>
           <div className="bg-gradient-to-br from-red-900/40 to-[#0A0F1C] border border-red-500/20 p-6 rounded-2xl group hover:border-red-500/50 transition">
-             <h3 className="text-gray-400 text-sm font-medium flex items-center justify-between">High Risk (Predictive) <AlertTriangle className="w-5 h-5 text-red-500 group-hover:scale-110 transition" /></h3>
+             <h3 className="text-gray-400 text-sm font-medium flex items-center justify-between">{t.highRisk} <AlertTriangle className="w-5 h-5 text-red-500 group-hover:scale-110 transition" /></h3>
              <p className="text-4xl font-bold text-red-400 mt-2">{enhancedStudents.filter(s => s.risk >= 50).length}</p>
           </div>
           <div className="bg-gradient-to-br from-orange-900/40 to-[#0A0F1C] border border-orange-500/20 p-6 rounded-2xl group hover:border-orange-500/50 transition">
-             <h3 className="text-gray-400 text-sm font-medium flex items-center justify-between">Silent Dropouts <Activity className="w-5 h-5 text-orange-400 group-hover:scale-110 transition" /></h3>
+             <h3 className="text-gray-400 text-sm font-medium flex items-center justify-between">{t.silent} <Activity className="w-5 h-5 text-orange-400 group-hover:scale-110 transition" /></h3>
              <p className="text-4xl font-bold text-orange-400 mt-2">{enhancedStudents.filter(s => isSilentDropout(s)).length}</p>
              <p className="text-xs text-orange-500/70 mt-1">Attendance &gt; 70% + Engagement &lt; 40%</p>
           </div>
           <div className="bg-gradient-to-br from-purple-900/40 to-[#0A0F1C] border border-purple-500/20 p-6 rounded-2xl flex flex-col justify-center items-center cursor-pointer hover:bg-purple-900/50 transition relative overflow-hidden group">
              <Sparkles className="w-8 h-8 text-purple-400 mb-2 group-hover:rotate-12 transition" />
-             <span className="font-semibold text-purple-300 relative z-10">Run Engine Analysis</span>
+             <span className="font-semibold text-purple-300 relative z-10">{t.run}</span>
              <div className="absolute inset-0 bg-purple-500/10 opacity-0 group-hover:opacity-100 transition duration-500"></div>
           </div>
         </div>
@@ -225,6 +254,27 @@ const Dashboard = ({ setAuthUser }) => {
                     </Bar>
                   </BarChart>
                 </ResponsiveContainer>
+             </div>
+          </div>
+        </div>
+
+        {/* Campus Map & Alerts */}
+        <div className="bg-[#101625] border border-gray-800 p-6 rounded-2xl">
+          <h3 className="text-white font-semibold mb-4 text-sm uppercase tracking-wider flex items-center gap-2"><MapPin className="w-4 h-4 text-gray-400" /> {t.map}</h3>
+          <div className="relative w-full h-48 bg-gray-900 rounded-xl overflow-hidden border border-gray-800 flex items-center justify-center">
+             <div className="absolute inset-0 opacity-20" style={{ backgroundImage: 'radial-gradient(#4f46e5 1px, transparent 1px)', backgroundSize: '16px 16px' }}></div>
+             <div className="absolute top-10 flex flex-col items-center top-[20%] left-[30%]">
+               <div className="w-4 h-4 bg-orange-500 rounded-full animate-ping absolute"></div>
+               <div className="w-4 h-4 bg-orange-500 rounded-full relative z-10 border-2 border-gray-900"></div>
+               <span className="text-[10px] text-orange-400 font-bold mt-1 bg-gray-900 px-1 rounded">Library (Academic)</span>
+             </div>
+             <div className="absolute flex flex-col items-center bottom-[30%] right-[25%]">
+               <div className="w-4 h-4 bg-red-500 rounded-full animate-ping absolute"></div>
+               <div className="w-4 h-4 bg-red-500 rounded-full relative z-10 border-2 border-gray-900"></div>
+               <span className="text-[10px] text-red-500 font-bold mt-1 bg-gray-900 px-1 rounded">Dorm 4 (Emergency)</span>
+             </div>
+             <div className="absolute flex flex-col items-center top-[40%] right-[45%]">
+               <div className="w-3 h-3 bg-indigo-500 rounded-full relative z-10 border-2 border-gray-900"></div>
              </div>
           </div>
         </div>
@@ -315,7 +365,13 @@ const Dashboard = ({ setAuthUser }) => {
                  </select>
                </div>
                <div>
-                 <label className="text-sm text-gray-400 mb-2 block font-semibold uppercase tracking-wider">Description</label>
+                 <div className="flex justify-between items-end mb-2">
+                   <label className="text-sm text-gray-400 block font-semibold uppercase tracking-wider">Description</label>
+                   <button type="button" onClick={handleVoiceRecord} className={`flex items-center gap-1 text-xs px-2 py-1 rounded transition ${isListening ? 'bg-red-500/20 text-red-400 animate-pulse' : 'bg-gray-800 text-gray-400 hover:bg-gray-700'}`}>
+                     {isListening ? <Mic className="w-3 h-3" /> : <MicOff className="w-3 h-3" />}
+                     {isListening ? 'Recording...' : 'Voice Dictation'}
+                   </button>
+                 </div>
                  <textarea required value={reportDesc} onChange={(e) => setReportDesc(e.target.value)} rows={4} placeholder="Describe the situation securely and anonymously. Our AI engine will parse this immediately." className="w-full bg-gray-900 border border-gray-700 text-white rounded-xl px-4 py-3 focus:outline-none focus:border-red-500/50 transition resize-none"></textarea>
                </div>
                
@@ -325,6 +381,17 @@ const Dashboard = ({ setAuthUser }) => {
                  {submittingReport ? <Activity className="w-5 h-5 animate-spin" /> : 'Log Report & Alert Staff'}
                </button>
             </form>
+          </div>
+        </div>
+      )}
+      
+      {/* Live Toast System */}
+      {toast && (
+        <div className="fixed bottom-6 right-6 z-50 animate-in slide-in-from-bottom-5 fade-in duration-300">
+          <div className={`flex items-center gap-3 px-5 py-3 rounded-2xl shadow-2xl border ${toast.type === 'error' ? 'bg-red-900/40 border-red-500/30 text-red-100' : 'bg-emerald-900/40 border-emerald-500/30 text-emerald-100'} backdrop-blur-xl`}>
+             {toast.type === 'error' ? <AlertTriangle className="w-5 h-5 text-red-400" /> : <CheckCircle className="w-5 h-5 text-emerald-400" />}
+             <span className="font-semibold text-sm">{toast.msg}</span>
+             <button onClick={() => setToast(null)} className="ml-2 text-white/50 hover:text-white"><X className="w-4 h-4" /></button>
           </div>
         </div>
       )}
