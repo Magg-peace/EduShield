@@ -1,8 +1,12 @@
 import React, { useState, useEffect } from 'react';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { onAuthStateChanged } from 'firebase/auth';
 import { auth } from './firebase';
+
+import Landing from './Landing';
 import Login from './Login';
 import Dashboard from './Dashboard';
+import StudentProfile from './StudentProfile';
 
 function App() {
   const [authUser, setAuthUser] = useState(null);
@@ -26,13 +30,16 @@ function App() {
   }
 
   return (
-    <div className="App">
-      {authUser ? (
-        <Dashboard setAuthUser={setAuthUser} />
-      ) : (
-        <Login setAuthUser={setAuthUser} />
-      )}
-    </div>
+    <Router>
+      <div className="App">
+        <Routes>
+          <Route path="/" element={!authUser ? <Landing /> : <Navigate to="/dashboard" />} />
+          <Route path="/login" element={!authUser ? <Login setAuthUser={setAuthUser} /> : <Navigate to="/dashboard" />} />
+          <Route path="/dashboard" element={authUser ? <Dashboard setAuthUser={setAuthUser} /> : <Navigate to="/login" />} />
+          <Route path="/student/:id" element={authUser ? <StudentProfile /> : <Navigate to="/login" />} />
+        </Routes>
+      </div>
+    </Router>
   );
 }
 

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { collection, getDocs } from 'firebase/firestore';
 import { db, auth } from './firebase';
 import { signOut } from 'firebase/auth';
+import { useNavigate } from 'react-router-dom';
 import { LogOut, AlertTriangle, TrendingDown, UserCheck, Activity, ShieldAlert, Sparkles, Search, Filter, X, ChevronRight, Mail } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, PieChart, Pie } from 'recharts';
 
@@ -10,8 +11,8 @@ const Dashboard = ({ setAuthUser }) => {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [filterRisk, setFilterRisk] = useState("ALL");
-  const [selectedStudent, setSelectedStudent] = useState(null);
   const [sendingEmail, setSendingEmail] = useState(false);
+  const navigate = useNavigate();
 
   const fetchStudents = async () => {
     setLoading(true);
@@ -216,7 +217,7 @@ const Dashboard = ({ setAuthUser }) => {
               {filteredStudents.map((student) => {
                 const isSilent = isSilentDropout(student);
                 return (
-                  <tr key={student.id} onClick={() => setSelectedStudent(student)} className="hover:bg-gray-800/50 transition duration-200 group">
+                  <tr key={student.id} onClick={() => navigate(`/student/${student.id}`)} className="hover:bg-gray-800/50 transition duration-200 group">
                     <td className="p-4">
                       <p className="font-semibold text-white">{student.name}</p>
                       {isSilent && <span className="text-[10px] uppercase font-bold text-orange-400 tracking-wider bg-orange-400/10 px-2 py-0.5 rounded-full mt-1 inline-block animate-pulse">Silent Risk ⚠️</span>}
@@ -246,52 +247,6 @@ const Dashboard = ({ setAuthUser }) => {
         </div>
 
       </div>
-
-      {/* Detail Modal Overlay */}
-      {selectedStudent && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex justify-end transition-all">
-          <div className="w-full md:w-[500px] h-full bg-[#101625] border-l border-gray-800 shadow-2xl p-8 overflow-y-auto animate-in slide-in-from-right duration-300 relative">
-            <button onClick={() => setSelectedStudent(null)} className="absolute top-6 right-6 text-gray-500 hover:text-white bg-gray-800 rounded-full p-2 transition hover:rotate-90"><X className="w-5 h-5" /></button>
-            <h2 className="text-3xl font-bold text-white mb-2">{selectedStudent.name}</h2>
-            <div className="flex gap-2 mb-8">
-               <span className={`px-3 py-1 text-xs font-bold uppercase tracking-wider rounded-md ${selectedStudent.risk>=50?'bg-red-500/20 text-red-400':selectedStudent.risk>=30?'bg-orange-500/20 text-orange-400':'bg-emerald-500/20 text-emerald-400'}`}>
-                 {selectedStudent.risk>=50 ? 'High Risk' : selectedStudent.risk>=30 ? 'Medium Risk' : 'Safe'}
-               </span>
-            </div>
-
-            <div className="space-y-6">
-               <div className="bg-gray-800/30 p-5 rounded-xl border border-gray-800 hover:border-gray-700 transition">
-                 <h4 className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-4">Aggregate Metrics</h4>
-                 <div className="grid grid-cols-3 gap-4">
-                   <div className="text-center group"><p className="text-3xl font-bold text-white group-hover:scale-110 transition">{selectedStudent.marks}%</p><p className="text-xs text-gray-500 mt-1">Marks</p></div>
-                   <div className="text-center group"><p className="text-3xl font-bold text-white group-hover:scale-110 transition">{selectedStudent.attendance}%</p><p className="text-xs text-gray-500 mt-1">Attendance</p></div>
-                   <div className="text-center group"><p className="text-3xl font-bold text-white group-hover:scale-110 transition">{selectedStudent.engagement}%</p><p className="text-xs text-gray-500 mt-1">Engagement</p></div>
-                 </div>
-               </div>
-
-               <div className={`p-6 rounded-xl border ${selectedStudent.risk>=50?'bg-red-900/10 border-red-500/30':selectedStudent.risk>=30?'bg-orange-900/10 border-orange-500/30':'bg-indigo-900/10 border-indigo-500/30'}`}>
-                 <h4 className="flex items-center gap-2 text-sm font-semibold text-white mb-4"><Sparkles className="w-4 h-4 text-purple-400" /> AI Recommendation Workflow</h4>
-                 <p className="text-sm text-gray-300 leading-relaxed bg-black/20 p-4 rounded-lg border border-white/5">{getIntervention(selectedStudent, selectedStudent.risk)}</p>
-               </div>
-
-               {selectedStudent.risk >= 50 ? (
-                 <button 
-                  onClick={() => sendAlert(selectedStudent)}
-                  disabled={sendingEmail}
-                  className="w-full flex items-center justify-center gap-2 bg-red-600/90 hover:bg-red-500 text-white font-semibold py-4 rounded-xl transition shadow-[0_0_15px_rgba(239,68,68,0.2)] hover:shadow-[0_0_25px_rgba(239,68,68,0.4)] disabled:opacity-50"
-                 >
-                   <Mail className="w-5 h-5" /> 
-                   {sendingEmail ? "Dispatching Alert..." : "Dispatch Urgent Email Alert 🚨"}
-                 </button>
-               ) : (
-                 <button className="w-full flex items-center justify-center gap-2 bg-gray-800 text-gray-500 border border-gray-700 cursor-not-allowed font-semibold py-4 rounded-xl transition">
-                   <Mail className="w-5 h-5" /> Student Safe. Alert disabled.
-                 </button>
-               )}
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 };
