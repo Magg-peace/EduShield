@@ -4,12 +4,12 @@ import { db, auth } from './firebase';
 import { signOut } from 'firebase/auth';
 import { useNavigate } from 'react-router-dom';
 import { LogOut, AlertTriangle, TrendingDown, UserCheck, Activity, ShieldAlert, Sparkles, Search, Filter, X, ChevronRight, Mail, PhoneCall, Mic, MicOff, Globe, MapPin, CheckCircle } from 'lucide-react';
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, PieChart, Pie } from 'recharts';
 
 const dict = {
   en: { title: "EduShield X", sub: "Predictive Intelligence Dashboard", total: "Total Students", highRisk: "High Risk (Predictive)", silent: "Silent Dropouts", run: "Run Engine Analysis", logout: "Logout", report: "Report Crisis", map: "Campus Incident Hotspots" },
   es: { title: "EduShield X", sub: "Panel de Inteligencia Predictiva", total: "Estudiantes Totales", highRisk: "Alto Riesgo (Predictivo)", silent: "Deserciones Silenciosas", run: "Ejecutar Análisis", logout: "Cerrar Sesión", report: "Reportar Crisis", map: "Zonas de Incidentes en Campus" }
 };
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, PieChart, Pie } from 'recharts';
 
 const Dashboard = ({ setAuthUser }) => {
   const [students, setStudents] = useState([]);
