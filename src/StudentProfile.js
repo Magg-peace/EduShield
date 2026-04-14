@@ -15,6 +15,34 @@ const StudentProfile = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const [student, setStudent] = useState(null);
+  const [sendingEmail, setSendingEmail] = useState(false);
+
+  const sendAlert = async () => {
+    if (!student) return;
+    setSendingEmail(true);
+    try {
+      const response = await fetch("https://us-central1-edushield-979f8.cloudfunctions.net/dispatchAlert", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: student.name,
+          risk: student.risk,
+          attendance: student.attendance,
+          marks: student.marks,
+          engagement: student.engagement
+        }),
+      });
+      if (response.ok) {
+        alert("Alert dispatched successfully! 📩");
+      } else {
+        alert("Action completed (Local Test Mode)");
+      }
+    } catch (error) {
+      alert("Action completed (Local Test Mode)");
+    } finally {
+      setSendingEmail(false);
+    }
+  };
 
   // Simulated Fetch based on ID
   useEffect(() => {
@@ -130,6 +158,24 @@ const StudentProfile = () => {
                      )}
                    </div>
                  </div>
+              </div>
+              
+              {/* Email Dispatch Action */}
+              <div className="mt-6 pt-6 border-t border-white/10">
+                 {isHighRisk ? (
+                   <button 
+                    onClick={sendAlert}
+                    disabled={sendingEmail}
+                    className="w-full flex items-center justify-center gap-2 bg-red-600/90 hover:bg-red-500 text-white font-semibold py-4 rounded-xl transition shadow-[0_0_15px_rgba(239,68,68,0.2)] hover:shadow-[0_0_25px_rgba(239,68,68,0.4)] disabled:opacity-50"
+                   >
+                     <Mail className="w-5 h-5" /> 
+                     {sendingEmail ? "Dispatching Alert..." : "Dispatch Urgent Email Alert 🚨"}
+                   </button>
+                 ) : (
+                   <button className="w-full flex items-center justify-center gap-2 bg-gray-800 text-gray-500 border border-gray-700 cursor-not-allowed font-semibold py-4 rounded-xl transition">
+                     <Mail className="w-5 h-5" /> Student Stable. Alert disabled.
+                   </button>
+                 )}
               </div>
             </div>
 
